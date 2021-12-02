@@ -56,6 +56,72 @@ def load_SDD(path='data/SDD/', mode='train'):
 	data = data.drop(columns=['rec&trackId'])
 	return data
 
+def load_ETH(path='eth', mode='train'):
+    
+    assert mode in ['train', 'val', 'test']
+
+    path = os.path.join(path, mode)
+    scenes = os.listdir(path)
+    
+    eth_cols = ['frame', 'trackId', 'x', 'y']
+    
+    data = []
+    print('loading ' + mode + ' data')
+    
+    for scene in scenes:
+        scene_path = os.path.join(path, scene) # removed , 'annotations.txt'  
+        scene_df = pd.read_csv(scene_path, header=None, names=eth_cols, delimiter="\t")       
+        scene_df['sceneId'] = scene.split(".")[0].split("_")[1]   # removed here .txt
+        # new unique id by combining scene_id and track_id
+        scene_df['rec&trackId'] = [recId + '_' + str(trackId).zfill(4) for recId, trackId in
+                                   zip(scene_df.sceneId, scene_df.trackId)]
+        
+        data.append(scene_df)
+    data = pd.concat(data, ignore_index=True)
+    rec_trackId2metaId = {}
+    for i, j in enumerate(data['rec&trackId'].unique()):
+        rec_trackId2metaId[j] = i
+    data['metaId'] = [rec_trackId2metaId[i] for i in data['rec&trackId']]
+    data = data.drop(columns=['rec&trackId'])
+    
+    data['frame'] /= 10 
+    
+    return data
+
+
+def load_shanghaitech(path='data/shanghaitech', mode='train'):
+    
+    assert mode in ['train', 'test']
+
+    path = os.path.join(path, mode)
+    scenes = os.listdir(path)
+    
+    shaghaitech_cols = ['frame', 'trackId', 'x', 'y', 'w', 'h', '1', '2', '3', '4']
+    
+    data = []
+    print('loading ' + mode + ' data')
+    
+    for scene in scenes:
+        scene_path = os.path.join(path, scene) # removed , 'annotations.txt'  
+        scene_df = pd.read_csv(scene_path, header=None, names=shaghaitech_cols, delimiter=",")
+        
+        
+        scene_df['sceneId'] = scene.split(".")[0].split("_")[0] + "_" + scene.split(".")[0].split("_")[1]   # removed here .txt
+        # new unique id by combining scene_id and track_id
+        scene_df['rec&trackId'] = [recId + '_' + str(trackId).zfill(4) for recId, trackId in
+                                   zip(scene_df.sceneId, scene_df.trackId)]
+        
+        data.append(scene_df)
+    data = pd.concat(data, ignore_index=True)
+    rec_trackId2metaId = {}
+    for i, j in enumerate(data['rec&trackId'].unique()):
+        rec_trackId2metaId[j] = i
+    data['metaId'] = [rec_trackId2metaId[i] for i in data['rec&trackId']]
+    data = data.drop(columns=['rec&trackId'])
+
+    
+    return data
+
 
 def mask_step(x, step):
 	"""
@@ -521,8 +587,33 @@ def load_and_window_inD(step, window_size, stride, scenes=[1,2,3,4], pickle=Fals
 
 	return df
 
-# train-scenes are 2, 3, 4
-# test scene is 1
+def load_and_window_ETH(step, window_size, stride, path=None, mode='train', pickle_path=None):
+    if pickle_path is not None:
+        df = pd.read_pickle(pickle_path)
+    else:
+        df = load_ETH(path=path, mode=mode)
+    
+    df = split_fragmented(df)  # split track if frame is not continuous
+    df = downsample(df, step=step)
+    df = filter_short_trajectories(df, threshold=window_size)  
+    df = sliding_window(df, window_size=window_size, stride=stride)
+    df = df.iloc[:, :-1]
+    
+    return df
 
-# df = load_and_window_inD(step=25, window_size=35, stride=35, scenes=[1], pickle=False)
-# df.to_pickle('test.pickle')
+
+def load_and_window_shanghaitech(step, window_size, stride, path=None, mode='train', pickle_path=None):
+    if pickle_path is not None:
+        df = pd.read_pickle(pickle_path)
+    else:
+        df = load_shanghaitech(path=path, mode=mode)
+    
+    df = split_fragmented(df)  # split track if frame is not continuous
+    df = downsample(df, step=step)
+    df = filter_short_trajectories(df, threshold=window_size)  
+    df = sliding_window(df, window_size=window_size, stride=stride)
+    df = df.iloc[:, :-1]
+    df = df.drop(columns=['w', 'h', '1', '2', '3', '4'])
+    return df
+
+
