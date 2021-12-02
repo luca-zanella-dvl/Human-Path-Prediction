@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from utils.image_utils import get_patch, image2world
-
+import wandb
 
 def train(model, train_loader, train_images, e, obs_len, pred_len, batch_size, params, gt_template, device, input_template, optimizer, criterion, dataset_name, homo_mat):
 	"""
@@ -15,7 +15,11 @@ def train(model, train_loader, train_images, e, obs_len, pred_len, batch_size, p
 	:param gt_template:  precalculated Gaussian heatmap template as torch.Tensor
 	:return: train_ADE, train_FDE, train_loss for one epoch
 	"""
+	torch.manual_seed(2021)
 	train_loss = 0
+	G_loss = 0
+    T_loss = 0
+    cnt = 0
 	train_ADE = []
 	train_FDE = []
 	model.train()
@@ -64,8 +68,9 @@ def train(model, train_loader, train_images, e, obs_len, pred_len, batch_size, p
 			gt_waypoint_map = torch.stack(gt_waypoint_map).reshape([-1, gt_waypoints.shape[1], H, W])
 
 			# Concatenate heatmap and semantic map
-			semantic_map = scene_image.expand(observed_map.shape[0], -1, -1, -1)  # expand to match heatmap size
-			feature_input = torch.cat([semantic_map, observed_map], dim=1)
+			#semantic_map = scene_image.expand(observed_map.shape[0], -1, -1, -1)  # expand to match heatmap size
+			#feature_input = torch.cat([semantic_map, observed_map], dim=1)
+			feature_input = observed_map
 
 			# Forward pass
 			# Calculate features
@@ -92,18 +97,29 @@ def train(model, train_loader, train_images, e, obs_len, pred_len, batch_size, p
 
 			with torch.no_grad():
 				train_loss += loss
+				# log metrics
+                G_loss += goal_loss
+                T_loss += traj_loss
+                cnt += 1
+
 				# Evaluate using Softargmax, not a very exact evaluation but a lot faster than full prediction
 				pred_traj = model.softargmax(pred_traj_map)
 				pred_goal = model.softargmax(pred_goal_map[:, -1:])
 
 				# converts ETH/UCY pixel coordinates back into world-coordinates
-				# if dataset_name == 'eth':
-				# 	pred_goal = image2world(pred_goal, scene, homo_mat, params)
-				# 	pred_traj = image2world(pred_traj, scene, homo_mat, params)
-				# 	gt_future = image2world(gt_future, scene, homo_mat, params)
+				if dataset_name == 'eth':
+				 	pred_goal = image2world(pred_goal, scene.split("_")[0], homo_mat, params['resize'])
+				 	pred_traj = image2world(pred_traj, scene.split("_")[0], homo_mat, params['resize'])
+				 	gt_future = image2world(gt_future, scene.split("_")[0], homo_mat, params['resize'])
 
 				train_ADE.append(((((gt_future - pred_traj) / params['resize']) ** 2).sum(dim=2) ** 0.5).mean(dim=1))
 				train_FDE.append(((((gt_future[:, -1:] - pred_goal[:, -1:]) / params['resize']) ** 2).sum(dim=2) ** 0.5).mean(dim=1))
+
+	wandb.define_metric("epoch")
+    wandb.define_metric("Loss/*", step_metric="epoch")
+    wandb.log({"Loss/Goal": G_loss/cnt , "epoch": e})
+    wandb.log({"Loss/Traj": T_loss/cnt , "epoch": e})
+    
 
 	train_ADE = torch.cat(train_ADE).mean()
 	train_FDE = torch.cat(train_FDE).mean()
