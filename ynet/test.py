@@ -82,11 +82,12 @@ def evaluate(model, val_loader, val_images, num_goals, num_traj, obs_len, batch_
 				observed_map = torch.stack(observed_map).reshape([-1, obs_len, H, W])
 
 				gt_future = trajectory[i:i+batch_size, obs_len:].to(device)
-				semantic_image = scene_image.expand(observed_map.shape[0], -1, -1, -1)
+				#semantic_image = scene_image.expand(observed_map.shape[0], -1, -1, -1)
 
 				# Forward pass
 				# Calculate features
-				feature_input = torch.cat([semantic_image, observed_map], dim=1)
+				#feature_input = torch.cat([semantic_image, observed_map], dim=1)
+				feature_input = observed_map
 				features = model.pred_features(feature_input)
 
 				# Predict goal and waypoint probability distributions
@@ -200,15 +201,23 @@ def evaluate(model, val_loader, val_images, num_goals, num_traj, obs_len, batch_
 					pred_traj_map = model.pred_traj(traj_input)
 					pred_traj = model.softargmax(pred_traj_map)
 					future_samples.append(pred_traj)
-				future_samples = torch.stack(future_samples)
 
-				gt_goal = gt_future[:, -1:]
+					if dataset_name == "eth":
+                        future_samples.append(image2world(pred_traj, scene.split("_")[0], homo_mat, resize))  
+                    else:
+                        future_samples.append(pred_traj)
+
+                future_samples = torch.stack(future_samples)
 
 				# converts ETH/UCY pixel coordinates back into world-coordinates
 				if dataset_name == 'eth':
-					waypoint_samples = image2world(waypoint_samples, scene, homo_mat, resize)
-					pred_traj = image2world(pred_traj, scene, homo_mat, resize)
-					gt_future = image2world(gt_future, scene, homo_mat, resize)
+					waypoint_samples = image2world(waypoint_samples, scene.split("_")[0], homo_mat, resize)
+					pred_traj = image2world(pred_traj, scene.split("_")[0], homo_mat, resize)
+					gt_future = image2world(gt_future, scene.split("_")[0], homo_mat, resize)
+
+				gt_goal = gt_future[:, -1:]
+
+				
 
 				val_FDE.append(((((gt_goal - waypoint_samples[:, :, -1:]) / resize) ** 2).sum(dim=3) ** 0.5).min(dim=0)[0])
 				val_ADE.append(((((gt_future - future_samples) / resize) ** 2).sum(dim=3) ** 0.5).mean(dim=2).min(dim=0)[0])
