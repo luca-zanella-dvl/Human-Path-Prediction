@@ -116,8 +116,8 @@ def image2world(image_coords, scene, homo_mat, resize):
 	traj_image2world = image_coords.clone()
 	if traj_image2world.dim() == 4:
 		traj_image2world = traj_image2world.reshape(-1, image_coords.shape[2], 2)
-	if scene in ['eth', 'hotel']:
-		traj_image2world[:, :, [0, 1]] = traj_image2world[:, :, [1, 0]]
+	#if scene in ['eth', 'hotel']:
+	#	traj_image2world[:, :, [0, 1]] = traj_image2world[:, :, [1, 0]]
 	traj_image2world = traj_image2world / resize
 	traj_image2world = F.pad(input=traj_image2world, pad=(0, 1, 0, 0), mode='constant', value=1)
 	traj_image2world = traj_image2world.reshape(-1, 3)
@@ -126,3 +126,12 @@ def image2world(image_coords, scene, homo_mat, resize):
 	traj_image2world = traj_image2world[:, :2]
 	traj_image2world = traj_image2world.view_as(image_coords)
 	return traj_image2world
+
+def world2image(traj_w, H_inv):    
+    # Converts points from Euclidean to homogeneous space, by (x, y) → (x, y, 1)
+    traj_homog = np.hstack((traj_w, np.ones((traj_w.shape[0], 1)))).T  
+    # to camera frame
+    traj_cam = np.matmul(H_inv, traj_homog)  
+    # to pixel coords
+    traj_uvz = np.transpose(traj_cam/traj_cam[2]) 
+    return traj_uvz[:, :2].astype(int)  
