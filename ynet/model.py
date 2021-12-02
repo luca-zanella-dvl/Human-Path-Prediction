@@ -120,7 +120,7 @@ class YNetDecoder(nn.Module):
 
 
 class YNetTorch(nn.Module):
-	def __init__(self, obs_len, pred_len, segmentation_model_fp, use_features_only=False, semantic_classes=6,
+	def __init__(self, obs_len, pred_len, segmentation_model_fp=None, use_features_only=False, semantic_classes=0,
 				 encoder_channels=[], decoder_channels=[], waypoints=1):
 		"""
 		Complete Y-net Architecture including semantic segmentation backbone, heatmap embedding and ConvPredictor
@@ -231,6 +231,8 @@ class YNet:
 		:param device: torch.device, if None -> 'cuda' if torch.cuda.is_available() else 'cpu'
 		:return:
 		"""
+		torch.manual_seed(2021)
+
 		if device is None:
 			device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -246,15 +248,32 @@ class YNet:
 			image_file_name = 'reference.png'
 		elif dataset_name == 'eth':
 			image_file_name = 'oracle.png'
+		elif dataset_name == 'shanghaitech':
+			image_file_name = 'oracle.png'
 		else:
 			raise ValueError(f'{dataset_name} dataset is not supported')
 
 		# ETH/UCY specific: Homography matrix is needed to convert pixel to world coordinates
 		if dataset_name == 'eth':
 			self.homo_mat = {}
-			for scene in ['eth', 'hotel', 'students001', 'students003', 'uni_examples', 'zara1', 'zara2', 'zara3']:
+			for scene in ['eth', 'hotel', 'students001', 'students003', 'examples', 'zara01', 'zara02', 'zara03']:
 				self.homo_mat[scene] = torch.Tensor(np.loadtxt(f'data/eth_ucy/{scene}_H.txt')).to(device)
 			seg_mask = True
+
+			# conversion to pixel space before augmentation
+
+			for idx, row in train_data.iterrows():
+				scene = train_data.loc[idx, "sceneId"].split("_")[0]
+
+				H_inv = np.linalg.inv(self.homo_mat[scene].cpu())
+				train_data.iloc[idx:(idx+1), 2:4] = world2image( train_data.iloc[idx:(idx+1), 2:4] , H_inv)
+
+			for idx, row in val_data.iterrows():
+				scene = val_data.loc[idx, "sceneId"].split("_")[0]
+
+				H_inv = np.linalg.inv(self.homo_mat[scene].cpu())
+				val_data.iloc[idx:(idx+1), 2:4] = world2image( val_data.iloc[idx:(idx+1), 2:4] , H_inv)
+
 		else:
 			self.homo_mat = None
 			seg_mask = False
@@ -361,15 +380,24 @@ class YNet:
 			image_file_name = 'reference.png'
 		elif dataset_name == 'eth':
 			image_file_name = 'oracle.png'
+		elif dataset_name == 'shanghaitech':
+			image_file_name = 'oracle.png'
+
 		else:
 			raise ValueError(f'{dataset_name} dataset is not supported')
 
 		# ETH/UCY specific: Homography matrix is needed to convert pixel to world coordinates
 		if dataset_name == 'eth':
 			self.homo_mat = {}
-			for scene in ['eth', 'hotel', 'students001', 'students003', 'uni_examples', 'zara1', 'zara2', 'zara3']:
+			for scene in ['eth', 'hotel', 'students001', 'students003', 'examples', 'zara01', 'zara02', 'zara03']:
 				self.homo_mat[scene] = torch.Tensor(np.loadtxt(f'data/eth_ucy/{scene}_H.txt')).to(device)
 			seg_mask = True
+
+			for idx, row in data.iterrows():
+				scene = data.loc[idx, "sceneId"].split("_")[0]
+
+				H_inv = np.linalg.inv(self.homo_mat[scene].cpu())
+				data.iloc[idx:(idx+1), 2:4] = world2image( data.iloc[idx:(idx+1), 2:4] , H_inv)
 		else:
 			self.homo_mat = None
 			seg_mask = False
