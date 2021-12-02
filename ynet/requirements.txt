@@ -6,3 +6,4 @@ pandas==1.0.5
 opencv-python==4.4.0.42
 scipy==1.5.0
 segmentation_models_pytorch==0.1.0
+wandb==0.12.1
