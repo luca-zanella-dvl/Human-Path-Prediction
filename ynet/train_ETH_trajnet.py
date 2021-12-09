@@ -27,7 +27,6 @@ if __name__ == "__main__":
 
     with open(CONFIG_FILE_PATH) as file:
         params = yaml.load(file, Loader=yaml.FullLoader)
-    # Benedetta: why you need to concat 01 at the end of the expname?
     experiment_name = CONFIG_FILE_PATH.split(".yaml")[0].split("config/")[1] + "01"  
 
     df_train = load_and_window_ETH(
