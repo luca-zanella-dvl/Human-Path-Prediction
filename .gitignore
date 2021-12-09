@@ -1,0 +1,4 @@
+ynet/config/
+ynet/data/
+ynet/pretrained_models/
+ynet/segmentation_models/
