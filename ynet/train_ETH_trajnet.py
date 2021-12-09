@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     with open(CONFIG_FILE_PATH) as file:
         params = yaml.load(file, Loader=yaml.FullLoader)
-    experiment_name = CONFIG_FILE_PATH.split(".yaml")[0].split("config/")[1] + "01"  
+    experiment_name = CONFIG_FILE_PATH.split(".yaml")[0].split("config/")[1]
 
     df_train = load_and_window_ETH(
         step=1, path="eth", mode="train", window_size=20, stride=20
