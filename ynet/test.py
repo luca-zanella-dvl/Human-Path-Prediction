@@ -203,11 +203,11 @@ def evaluate(model, val_loader, val_images, num_goals, num_traj, obs_len, batch_
 					future_samples.append(pred_traj)
 
 					if dataset_name == "eth":
-                        future_samples.append(image2world(pred_traj, scene.split("_")[0], homo_mat, resize))  
-                    else:
-                        future_samples.append(pred_traj)
+						future_samples.append(image2world(pred_traj, scene.split("_")[0], homo_mat, resize))  
+					else:
+						future_samples.append(pred_traj)
 
-                future_samples = torch.stack(future_samples)
+				future_samples = torch.stack(future_samples)
 
 				# converts ETH/UCY pixel coordinates back into world-coordinates
 				if dataset_name == 'eth':

@@ -8,7 +8,7 @@ import numpy as np
 from utils.softargmax import SoftArgmax2D, create_meshgrid
 from utils.preprocessing import augment_data, create_images_dict
 from utils.image_utils import create_gaussian_heatmap_template, create_dist_mat, \
-	preprocess_image_for_segmentation, pad, resize
+	preprocess_image_for_segmentation, pad, resize, world2image
 from utils.dataloader import SceneDataset, scene_collate
 from test import evaluate
 from train import train
@@ -381,8 +381,7 @@ class YNet:
 		elif dataset_name == 'eth':
 			image_file_name = 'oracle.png'
 		elif dataset_name == 'shanghaitech':
-			image_file_name = 'oracle.png'
-
+			image_file_name = 'reference.png'
 		else:
 			raise ValueError(f'{dataset_name} dataset is not supported')
 

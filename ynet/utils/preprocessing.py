@@ -66,7 +66,7 @@ def load_ETH(path='data/ETH/', mode='train'):
 	print('loading ' + mode + ' data')
 	for scene in scenes:
 		scene_path = os.path.join(path, scene) # removed , 'annotations.txt'  
-		scene_df = pd.read_csv(scene_path, header=None, names=ETH_cols, delimiter="\t")       
+		scene_df = pd.read_csv(scene_path, header=None, names=ETH_cols, delimiter="\t")     
 		scene_df['sceneId'] = scene.split("_")[1]
 		# new unique id by combining scene_id and track_id
 		scene_df['rec&trackId'] = [recId + '_' + str(trackId).zfill(4) for recId, trackId in
@@ -99,12 +99,11 @@ def load_shanghaitech(path='data/shanghaitech', mode='train'):
 		scene_path = os.path.join(path, scene) # removed , 'annotations.txt'  
 		scene_df = pd.read_csv(scene_path, header=None, names=shaghaitech_cols, delimiter=",")
 		
-		
+		scene_df = scene_df.drop(columns=['w', 'h', '1', '2', '3', '4'])
 		scene_df['sceneId'] = scene.split(".")[0].split("_")[0] + "_" + scene.split(".")[0].split("_")[1]   # removed here .txt
 		# new unique id by combining scene_id and track_id
 		scene_df['rec&trackId'] = [recId + '_' + str(trackId).zfill(4) for recId, trackId in
 								   zip(scene_df.sceneId, scene_df.trackId)]
-		
 		data.append(scene_df)
 	data = pd.concat(data, ignore_index=True)
 	rec_trackId2metaId = {}
@@ -604,12 +603,22 @@ def load_and_window_ETH(window_size, stride, path=None, mode='train', pickle_pat
 	df = split_fragmented(df)  # split track if frame is not continuous
 	df = filter_short_trajectories(df, threshold=window_size)  
 	df = sliding_window(df, window_size=window_size, stride=stride)
-	df = df.iloc[:, :-1]
-	
+
 	return df
 
 
 def load_and_window_shanghaitech(step, window_size, stride, path=None, mode='train', pickle_path=None):
+	"""
+	Helper function to aggregate loading and preprocessing in one function. Preprocessing contains:
+	- Split fragmented trajectories
+	- Filter short trajectories below threshold=window_size
+	- Sliding window with window_size and stride
+	:param window_size (int): Timesteps for one window
+	:param stride (int): How many timesteps to stride in windowing. If stride=window_size then there is no overlap
+	:param scenes (list of int): Which scenes to load, inD has 4 scenes
+	:param pickle (Bool): If True, load pickle instead of csv
+	:return pd.df: DataFrame containing the preprocessed data
+	"""
 	if pickle_path is not None:
 		df = pd.read_pickle(pickle_path)
 	else:
@@ -619,8 +628,7 @@ def load_and_window_shanghaitech(step, window_size, stride, path=None, mode='tra
 	df = downsample(df, step=step)
 	df = filter_short_trajectories(df, threshold=window_size)  
 	df = sliding_window(df, window_size=window_size, stride=stride)
-	df = df.iloc[:, :-1]
-	df = df.drop(columns=['w', 'h', '1', '2', '3', '4'])
+	
 	return df
 
 

@@ -18,8 +18,8 @@ def train(model, train_loader, train_images, e, obs_len, pred_len, batch_size, p
 	torch.manual_seed(2021)
 	train_loss = 0
 	G_loss = 0
-    T_loss = 0
-    cnt = 0
+	T_loss = 0
+	cnt = 0
 	train_ADE = []
 	train_FDE = []
 	model.train()
@@ -98,9 +98,9 @@ def train(model, train_loader, train_images, e, obs_len, pred_len, batch_size, p
 			with torch.no_grad():
 				train_loss += loss
 				# log metrics
-                G_loss += goal_loss
-                T_loss += traj_loss
-                cnt += 1
+				G_loss += goal_loss
+				T_loss += traj_loss
+				cnt += 1
 
 				# Evaluate using Softargmax, not a very exact evaluation but a lot faster than full prediction
 				pred_traj = model.softargmax(pred_traj_map)
@@ -108,18 +108,18 @@ def train(model, train_loader, train_images, e, obs_len, pred_len, batch_size, p
 
 				# converts ETH/UCY pixel coordinates back into world-coordinates
 				if dataset_name == 'eth':
-				 	pred_goal = image2world(pred_goal, scene.split("_")[0], homo_mat, params['resize'])
-				 	pred_traj = image2world(pred_traj, scene.split("_")[0], homo_mat, params['resize'])
-				 	gt_future = image2world(gt_future, scene.split("_")[0], homo_mat, params['resize'])
+						pred_goal = image2world(pred_goal, scene.split("_")[0], homo_mat, params['resize'])
+						pred_traj = image2world(pred_traj, scene.split("_")[0], homo_mat, params['resize'])
+						gt_future = image2world(gt_future, scene.split("_")[0], homo_mat, params['resize'])
 
 				train_ADE.append(((((gt_future - pred_traj) / params['resize']) ** 2).sum(dim=2) ** 0.5).mean(dim=1))
 				train_FDE.append(((((gt_future[:, -1:] - pred_goal[:, -1:]) / params['resize']) ** 2).sum(dim=2) ** 0.5).mean(dim=1))
 
 	wandb.define_metric("epoch")
-    wandb.define_metric("Loss/*", step_metric="epoch")
-    wandb.log({"Loss/Goal": G_loss/cnt , "epoch": e})
-    wandb.log({"Loss/Traj": T_loss/cnt , "epoch": e})
-    
+	wandb.define_metric("Loss/*", step_metric="epoch")
+	wandb.log({"Loss/Goal": G_loss/cnt , "epoch": e})
+	wandb.log({"Loss/Traj": T_loss/cnt , "epoch": e})
+	
 
 	train_ADE = torch.cat(train_ADE).mean()
 	train_FDE = torch.cat(train_FDE).mean()
