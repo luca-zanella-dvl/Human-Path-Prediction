@@ -32,10 +32,10 @@ if __name__ == "__main__":
 	experiment_name = CONFIG_FILE_PATH.split(".yaml")[0].split("config/")[1]
 
 	df_train = load_and_window_MT(
-		path="data/ETH/", mode="train", step=5, window_size=20, stride=20
+		path="data/MT/", mode="train", step=5, window_size=20, stride=20
 	)
 	df_val = load_and_window_MT(
-		path="data/ETH/", mode="val", step=5, window_size=20, stride=20
+		path="data/MT/", mode="val", step=5, window_size=20, stride=20
 	)
 
 	df_train.to_pickle(TRAIN_DATA_PATH)
