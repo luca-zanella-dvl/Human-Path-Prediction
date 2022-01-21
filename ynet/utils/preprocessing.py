@@ -5,6 +5,36 @@ import cv2
 from copy import deepcopy
 
 
+def load_MT(path='data/SDD/', mode='train'):
+	assert mode in ['train', 'val', 'test']
+
+	path = os.path.join(path, mode)
+	scenes = os.listdir(path)
+	MT_cols = ['frame', 'id', 'bb_left', 'bb_top', 'bb_width', 'bb_height', 'conf', 'x', 'y', 'z']
+	data = []
+	print('loading ' + mode + ' data')
+	for scene in scenes:
+		scene_path = os.path.join(path, scene, 'annotations.txt')
+		scene_df = pd.read_csv(scene_path, header=0, names=MT_cols, delimiter=' ')
+		# Calculate center point of bounding box
+		scene_df['x'] = scene_df['bb_left'] + scene_df['bb_width'] / 2
+		scene_df['y'] = scene_df['bb_top'] + scene_df['bb_height'] / 2
+		scene_df = scene_df.drop(columns=['bb_left', 'bb_top', 'bb_width', 'bb_height', 'conf', 'x', 'y', 'z'])
+		scene_df['sceneId'] = scene
+		# new unique id by combining scene_id and track_id
+		scene_df['rec&trackId'] = [rec_id + '_' + str(track_id).zfill(4) for rec_id, track_id in
+								   zip(scene_df.sceneId, scene_df.trackId)]
+		data.append(scene_df)
+	data = pd.concat(data, ignore_index=True)
+	rec_trackId2metaId = {}
+	for i, j in enumerate(data['rec&trackId'].unique()):
+		rec_trackId2metaId[j] = i
+	data['metaId'] = [rec_trackId2metaId[i] for i in data['rec&trackId']]
+	data = data.drop(columns=['rec&trackId'])
+
+	return data
+
+
 def load_SDD(path='data/SDD/', mode='train'):
 	'''
 	Loads data from Stanford Drone Dataset. Makes the following preprocessing:
@@ -54,7 +84,9 @@ def load_SDD(path='data/SDD/', mode='train'):
 		rec_trackId2metaId[j] = i
 	data['metaId'] = [rec_trackId2metaId[i] for i in data['rec&trackId']]
 	data = data.drop(columns=['rec&trackId'])
+
 	return data
+
 
 def load_ETH(path='data/ETH/', mode='train'):
 	assert mode in ['train', 'val', 'test']
@@ -216,6 +248,33 @@ def split_fragmented(df):
 	df = gb.apply(split_at_fragment_lambda, frag_idx, gb_frag)
 	df['metaId'] = pd.factorize(df['newMetaId'], sort=False)[0]
 	df = df.drop(columns='newMetaId')
+	return df
+
+
+def load_and_window_MT(step, window_size, stride, path=None, mode='train', pickle_path=None):
+	"""
+	Helper function to aggregate loading and preprocessing in one function. Preprocessing contains:
+	- Split fragmented trajectories
+	- Downsample fps
+	- Filter short trajectories below threshold=window_size
+	- Sliding window with window_size and stride
+	:param step (int): downsample factor, step=12.5 means 1fps and step=5 means 2.5fps on MT
+	:param window_size (int): Timesteps for one window
+	:param stride (int): How many timesteps to stride in windowing. If stride=window_size then there is no overlap
+	:param path (str): Path to MT directory (not subdirectory, which is contained in mode)
+	:param mode (str): Which dataset split, options=['train', 'val', 'test']
+	:param pickle_path (str): Alternative to path+mode, if there already is a pickled version of the raw MT as df
+	:return pd.df: DataFrame containing the preprocessed data
+	"""
+	if pickle_path is not None:
+		df = pd.read_pickle(pickle_path)
+	else:
+		df = load_MT(path=path, mode=mode)
+	df = split_fragmented(df)  # split track if frame is not continuous
+	df = downsample(df, step=step)
+	df = filter_short_trajectories(df, threshold=window_size)
+	df = sliding_window(df, window_size=window_size, stride=stride)
+
 	return df
 
 
