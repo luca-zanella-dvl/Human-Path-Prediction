@@ -250,6 +250,8 @@ class YNet:
 			image_file_name = 'oracle.png'
 		elif dataset_name == 'shanghaitech':
 			image_file_name = 'oracle.png'
+		elif dataset_name == 'mt':
+			image_file_name = 'reference.jpg'
 		else:
 			raise ValueError(f'{dataset_name} dataset is not supported')
 
@@ -382,6 +384,8 @@ class YNet:
 			image_file_name = 'oracle.png'
 		elif dataset_name == 'shanghaitech':
 			image_file_name = 'reference.png'
+		elif dataset_name == 'mt':
+			image_file_name = 'reference.jpg'
 		else:
 			raise ValueError(f'{dataset_name} dataset is not supported')
 
