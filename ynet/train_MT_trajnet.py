@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+import sys
 import pandas as pd
 import yaml
 import argparse
@@ -5,21 +8,27 @@ import torch
 from model import YNet
 import wandb
 
-from ynet.utils.preprocessing import load_and_window_MT
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[0]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+
+from utils.preprocessing import load_and_window_MT
 
 if __name__ == "__main__":
     #:param df: df
 	#:param window_size: sequence-length of one trajectory, mostly obs_len + pred_len
 	#:param stride: timesteps to move from one trajectory to the next one ---> If stride=window_size then there is no overlap
 	#:return: df with chunked trajectories
-	CONFIG_FILE_PATH = "config/mt_trajnet.yaml"  # yaml config file containing all the hyperparameters
+	CONFIG_FILE_PATH = ROOT / "config/mt_trajnet.yaml"  # yaml config file containing all the hyperparameters
 	EXPERIMENT_NAME = "mt_trajnet"  # arbitrary name for this experiment
 	DATASET_NAME = "mt"
 
-	TRAIN_DATA_PATH = "data/MT/train_mt.pkl"
-	TRAIN_IMAGE_PATH = "data/MT/train"
-	VAL_DATA_PATH = "data/MT/val_mt.pkl"
-	VAL_IMAGE_PATH = "data/MT/val"
+	TRAIN_DATA_PATH = ROOT / "data/MT/train_mt.pkl"
+	TRAIN_IMAGE_PATH = ROOT / "data/MT/train"
+	VAL_DATA_PATH = ROOT / "data/MT/val_mt.pkl"
+	VAL_IMAGE_PATH = ROOT / "data/MT/val"
 	OBS_LEN = 8  # in timesteps
 	PRED_LEN = 12  # in timesteps
 	NUM_GOALS = 20  # K_e
@@ -29,13 +38,13 @@ if __name__ == "__main__":
 
 	with open(CONFIG_FILE_PATH) as file:
 		params = yaml.load(file, Loader=yaml.FullLoader)
-	experiment_name = CONFIG_FILE_PATH.split(".yaml")[0].split("config/")[1]
+	experiment_name = str(CONFIG_FILE_PATH).split(".yaml")[0].split("config/")[1]
 
 	df_train = load_and_window_MT(
-		path="data/MT/", mode="train", step=5, window_size=20, stride=20
+		path=ROOT / "data/MT/", mode="train", step=5, window_size=20, stride=20
 	)
 	df_val = load_and_window_MT(
-		path="data/MT/", mode="val", step=5, window_size=20, stride=20
+		path=ROOT / "data/MT/", mode="val", step=5, window_size=20, stride=20
 	)
 
 	df_train.to_pickle(TRAIN_DATA_PATH)
