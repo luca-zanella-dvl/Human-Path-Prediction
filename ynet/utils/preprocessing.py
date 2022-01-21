@@ -10,16 +10,16 @@ def load_MT(path='data/SDD/', mode='train'):
 
 	path = os.path.join(path, mode)
 	scenes = os.listdir(path)
-	MT_cols = ['frame', 'id', 'bb_left', 'bb_top', 'bb_width', 'bb_height', 'conf', 'x', 'y', 'z']
+	MT_cols = ['frame', 'trackId', 'bb_left', 'bb_top', 'bb_width', 'bb_height', 'conf', 'x1', 'y1', 'z1']
 	data = []
 	print('loading ' + mode + ' data')
 	for scene in scenes:
 		scene_path = os.path.join(path, scene, 'results.txt')
-		scene_df = pd.read_csv(scene_path, header=0, names=MT_cols, delimiter=' ')
+		scene_df = pd.read_csv(scene_path, header=None, names=MT_cols, delimiter=',')
 		# Calculate center point of bounding box
 		scene_df['x'] = scene_df['bb_left'] + scene_df['bb_width'] / 2
 		scene_df['y'] = scene_df['bb_top'] + scene_df['bb_height'] / 2
-		scene_df = scene_df.drop(columns=['bb_left', 'bb_top', 'bb_width', 'bb_height', 'conf', 'x', 'y', 'z'])
+		scene_df = scene_df.drop(columns=['bb_left', 'bb_top', 'bb_width', 'bb_height', 'conf', 'x1', 'y1', 'z1'])
 		scene_df['sceneId'] = scene
 		# new unique id by combining scene_id and track_id
 		scene_df['rec&trackId'] = [rec_id + '_' + str(track_id).zfill(4) for rec_id, track_id in
