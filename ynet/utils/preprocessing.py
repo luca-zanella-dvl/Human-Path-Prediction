@@ -14,7 +14,7 @@ def load_MT(path='data/SDD/', mode='train'):
 	data = []
 	print('loading ' + mode + ' data')
 	for scene in scenes:
-		scene_path = os.path.join(path, scene, 'annotations.txt')
+		scene_path = os.path.join(path, scene, 'results.txt')
 		scene_df = pd.read_csv(scene_path, header=0, names=MT_cols, delimiter=' ')
 		# Calculate center point of bounding box
 		scene_df['x'] = scene_df['bb_left'] + scene_df['bb_width'] / 2
